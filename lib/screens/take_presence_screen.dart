@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/api_service.dart';
+import '../services/location_service.dart';
 import '../models/class_model.dart';
 // Asumsikan Anda sudah memiliki file model class_model.dart
 
@@ -12,6 +13,7 @@ class TakePresenceScreen extends StatefulWidget {
 
 class _TakePresenceScreenState extends State<TakePresenceScreen> {
   final ApiService _apiService = ApiService();
+  final LocationService _locationService = LocationService();
   File? _image;
   List<ClassModel> _classes = [];
   ClassModel? _selectedClass;
@@ -54,6 +56,7 @@ class _TakePresenceScreenState extends State<TakePresenceScreen> {
     }
   }
 
+
   // Mengirim foto ke API Backend (Fitur AI)
   Future<void> _submitPresence() async {
     if (_image == null || _selectedClass == null) {
@@ -65,13 +68,37 @@ class _TakePresenceScreenState extends State<TakePresenceScreen> {
 
     setState(() {
       _isLoading = true;
-      _message = 'Memproses pengenalan wajah...';
+      _message = 'Memeriksa lokasi...';
     });
 
     try {
+      // Geofence check - asumsikan target lokasi (contoh Jakarta)
+      double targetLat = -6.2088;
+      double targetLon = 106.8456;
+      double radius = 100.0; // 100 meter
+
+      bool isInGeofence = await _locationService.checkGeofence(targetLat, targetLon, radius);
+      if (!isInGeofence) {
+        setState(() {
+          _isLoading = false;
+          _message = 'Lokasi tidak valid. Anda berada di luar area geofence.';
+        });
+        return;
+      }
+
+      setState(() {
+        _message = 'Mendapatkan lokasi dan memproses...';
+      });
+
+      final locationData = await _locationService.getCurrentLocation();
+      setState(() {
+        _message = 'Memproses pengenalan wajah...';
+      });
+
       final result = await _apiService.submitPresence(
         _image!,
         _selectedClass!.id,
+        locationData,
       );
 
       String statusMessage;
@@ -88,7 +115,7 @@ class _TakePresenceScreenState extends State<TakePresenceScreen> {
     } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Terjadi Error Server: $e')));
+      ).showSnackBar(SnackBar(content: Text('Terjadi Error: $e')));
     } finally {
       setState(() {
         _isLoading = false;
