@@ -2,11 +2,17 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 class NotificationHandler {
-  static final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+  static final FirebaseMessaging _firebaseMessaging =
+      FirebaseMessaging.instance;
 
   /// Inisialisasi Firebase Messaging (simulasi).
   static Future<void> initialize() async {
-    await Firebase.initializeApp();
+    try {
+      await Firebase.initializeApp();
+    } catch (e) {
+      print('Firebase initialization failed: $e');
+      rethrow; // Re-throw to propagate the error
+    }
 
     // Request permission untuk notifikasi
     await _firebaseMessaging.requestPermission(
@@ -33,7 +39,9 @@ class NotificationHandler {
   }
 
   /// Handler untuk notifikasi background
-  static Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  static Future<void> _firebaseMessagingBackgroundHandler(
+    RemoteMessage message,
+  ) async {
     await Firebase.initializeApp();
     print('Handling background message: ${message.notification?.title}');
   }
